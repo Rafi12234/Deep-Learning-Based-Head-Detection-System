@@ -10,6 +10,7 @@ except Exception:  # pragma: no cover - optional dependency
     YOLO = None
 
 from ..config import get_settings
+from ..utils.geometry import iou
 from ..utils.logger import setup_logger
 
 
@@ -81,7 +82,7 @@ class HeadDetectionService:
                             "track_id": 0,
                         }
                     )
-            return detections
+            return self._suppress_duplicates(detections)
         except Exception as exc:
             logger.exception("Detection failed, switching to mock mode: %s", exc)
             self.mock_mode = True
@@ -102,13 +103,16 @@ class HeadDetectionService:
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             
             # Detect faces
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=8, minSize=(48, 48))
             
             # Convert face detections to our format
             for x, y, w, h in faces:
+                bbox = {"x1": int(x), "y1": int(y), "x2": int(x + w), "y2": int(y + h)}
+                if not self._is_valid_head_box(frame, bbox):
+                    continue
                 detections.append(
                     {
-                        "bbox": {"x1": int(x), "y1": int(y), "x2": int(x + w), "y2": int(y + h)},
+                        "bbox": bbox,
                         "confidence": round(random.uniform(0.75, 0.95), 2),
                         "class_name": "head",
                         "track_id": 0,
@@ -132,4 +136,34 @@ class HeadDetectionService:
                     }
                 )
         
-        return detections
+        return self._suppress_duplicates(detections)
+
+    def _is_valid_head_box(self, frame, bbox: dict) -> bool:
+        height, width = frame.shape[:2]
+        box_w = max(0, bbox["x2"] - bbox["x1"])
+        box_h = max(0, bbox["y2"] - bbox["y1"])
+        if box_w < 48 or box_h < 48:
+            return False
+
+        area_ratio = (box_w * box_h) / float(max(1, width * height))
+        if area_ratio < 0.01:
+            return False
+
+        aspect_ratio = box_w / float(max(1, box_h))
+        if aspect_ratio < 0.55 or aspect_ratio > 1.75:
+            return False
+
+        return True
+
+    def _suppress_duplicates(self, detections: list[dict]) -> list[dict]:
+        if len(detections) <= 1:
+            return detections
+
+        # Keep the highest-confidence detection first, then discard near-duplicates.
+        ordered = sorted(detections, key=lambda detection: detection.get("confidence", 0.0), reverse=True)
+        kept: list[dict] = []
+        for candidate in ordered:
+            if any(iou(candidate["bbox"], existing["bbox"]) >= 0.35 for existing in kept):
+                continue
+            kept.append(candidate)
+        return kept
