@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import cv2
 
 
@@ -20,9 +22,24 @@ class VideoStreamService:
         if self.capture is not None and self.capture.isOpened():
             return True
         self.source = parse_source(self.source)
-        self.capture = cv2.VideoCapture(self.source)
-        if not self.capture.isOpened():
+        self.capture = None
+
+        if os.name == "nt":
+            for backend in (cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY):
+                capture = cv2.VideoCapture(self.source, backend)
+                if capture.isOpened():
+                    self.capture = capture
+                    break
+                capture.release()
+        else:
+            self.capture = cv2.VideoCapture(self.source)
+
+        if self.capture is None or not self.capture.isOpened():
+            if self.capture is not None:
+                self.capture.release()
+                self.capture = None
             return False
+
         self.width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
         self.height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
         return True
