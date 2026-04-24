@@ -52,7 +52,11 @@ export function DetectionProvider({ children }) {
 
   const startCamera = async payload => {
     const result = await apiStartCamera(payload);
-    setCameraStatus(result.status?.includes('started') ? 'running' : cameraStatus);
+    if (result.status?.includes('started') || result.status === 'restarting' || result.status === 'already_running') {
+      setCameraStatus('running');
+    } else {
+      setCameraStatus(cameraStatus);
+    }
     return result;
   };
 
