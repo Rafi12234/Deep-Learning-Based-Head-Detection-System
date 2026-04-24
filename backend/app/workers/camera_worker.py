@@ -54,6 +54,13 @@ class CameraWorker:
 
     def start(self, source=None) -> dict:
         if self._running.is_set():
+            if self._camera_status == "disconnected":
+                if source is not None:
+                    self.video_service.source = parse_source(source)
+                self.video_service.release()
+                self._camera_status = "running"
+                self._store_camera_status()
+                return {"status": "restarting"}
             return {"status": "already_running"}
 
         if source is not None:
@@ -146,6 +153,7 @@ class CameraWorker:
 
             raw_detections = self.detection_service.detect(frame)
             tracked_detections = self.tracking_service.update(raw_detections)
+            self._assign_display_labels(tracked_detections)
             timestamp = datetime.now(timezone.utc).isoformat()
             self.counting_service.update(tracked_detections, fps, timestamp)
 
@@ -157,6 +165,12 @@ class CameraWorker:
             self.websocket_manager.broadcast_threadsafe(payload)
 
         self.video_service.release()
+
+    def _assign_display_labels(self, detections: list[dict]) -> None:
+        # Display labels are re-numbered for each frame as Head 1..N.
+        detections.sort(key=lambda detection: (detection["bbox"]["x1"], detection["bbox"]["y1"]))
+        for index, detection in enumerate(detections, start=1):
+            detection["label"] = f"Head {index}"
 
     def _update_state(self, frame, detections: list[dict], fps: float, timestamp: str) -> None:
         success, encoded = cv2.imencode(".jpg", frame)
