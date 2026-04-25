@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     confidence_threshold: float = Field(default=0.35, alias="CONFIDENCE_THRESHOLD")
     iou_threshold: float = Field(default=0.45, alias="IOU_THRESHOLD")
     image_size: int = Field(default=960, alias="IMAGE_SIZE")
+    max_detections: int = Field(default=300, alias="MAX_DETECTIONS")
+    agnostic_nms: bool = Field(default=True, alias="AGNOSTIC_NMS")
 
     video_source: str = Field(default="0", alias="VIDEO_SOURCE")
     use_mock_detection: bool = Field(default=False, alias="USE_MOCK_DETECTION")
@@ -26,8 +28,8 @@ class Settings(BaseSettings):
 
     frontend_url: str = Field(default="http://localhost:5173", alias="FRONTEND_URL")
     detection_log_interval_seconds: int = 3
-    track_timeout_seconds: float = 2.5
-    max_frame_width: int = 1280
+    track_timeout_seconds: float = 4.0
+    max_frame_width: int = 1920
 
     @property
     def resolved_model_path(self) -> Path:
