@@ -17,7 +17,6 @@ from ..services.tracking_service import TrackingService
 from ..services.video_stream_service import VideoStreamService
 from ..services.websocket_manager import WebSocketManager
 from ..services.video_stream_service import parse_source
-from ..utils.drawing import draw_detections
 from ..utils.logger import setup_logger
 
 
@@ -39,6 +38,7 @@ class CameraWorker:
         self._latest_frame_bytes: bytes | None = None
         self._last_log_time = 0.0
         self._camera_status = "stopped"
+        self._track_direction_state: dict[int, dict] = {}
 
     def _empty_payload(self) -> dict:
         return {
@@ -147,17 +147,21 @@ class CameraWorker:
             fps = 1.0 / delta if delta > 0 else 0.0
             last_frame_time = now
 
-            if frame.shape[1] > self.settings.max_frame_width:
-                scale = self.settings.max_frame_width / frame.shape[1]
-                frame = cv2.resize(frame, (self.settings.max_frame_width, int(frame.shape[0] * scale)))
+            target_max_width = self.settings.max_frame_width
+            if self.detection_service.mock_mode:
+                # Fallback cascades are CPU-heavy; cap width for smoother real-time FPS.
+                target_max_width = min(target_max_width, 960)
+
+            if frame.shape[1] > target_max_width:
+                scale = target_max_width / frame.shape[1]
+                frame = cv2.resize(frame, (target_max_width, int(frame.shape[0] * scale)))
 
             raw_detections = self.detection_service.detect(frame)
             tracked_detections = self.tracking_service.update(raw_detections)
-            self._assign_display_labels(tracked_detections)
+            self._assign_display_labels(tracked_detections, frame.shape[1], frame.shape[0])
             timestamp = datetime.now(timezone.utc).isoformat()
             self.counting_service.update(tracked_detections, fps, timestamp)
 
-            draw_detections(frame, tracked_detections)
             self._update_state(frame, tracked_detections, fps, timestamp)
             self._maybe_save_log()
 
@@ -166,11 +170,81 @@ class CameraWorker:
 
         self.video_service.release()
 
-    def _assign_display_labels(self, detections: list[dict]) -> None:
+    def _assign_display_labels(self, detections: list[dict], frame_width: int, frame_height: int) -> None:
         # Display labels are re-numbered for each frame as Head 1..N.
         detections.sort(key=lambda detection: (detection["bbox"]["x1"], detection["bbox"]["y1"]))
+        active_track_ids: set[int] = set()
         for index, detection in enumerate(detections, start=1):
             detection["label"] = f"Head {index}"
+            detection["direction"] = self._infer_direction(detection, frame_width, frame_height)
+            active_track_ids.add(int(detection.get("track_id", -1)))
+
+        # Keep per-track direction state only for tracks visible in this frame.
+        self._track_direction_state = {
+            track_id: state
+            for track_id, state in self._track_direction_state.items()
+            if track_id in active_track_ids
+        }
+
+    def _infer_direction(self, detection: dict, frame_width: int, frame_height: int) -> str:
+        bbox = detection.get("bbox", {})
+        center_x = (bbox.get("x1", 0) + bbox.get("x2", 0)) / 2
+        center_y = (bbox.get("y1", 0) + bbox.get("y2", 0)) / 2
+        bbox_width = max(1.0, float(bbox.get("x2", 0) - bbox.get("x1", 0)))
+        bbox_height = max(1.0, float(bbox.get("y2", 0) - bbox.get("y1", 0)))
+
+        area_ratio = (bbox_width * bbox_height) / max(1.0, float(frame_width * frame_height))
+        track_id = int(detection.get("track_id", -1))
+
+        pose_hint = str(detection.get("pose_hint", "forward")).lower()
+
+        # Trust class-based directional hints whenever available.
+        if pose_hint == "left":
+            direction = "Left"
+        elif pose_hint == "right":
+            direction = "Right"
+        elif pose_hint == "up":
+            direction = "Up"
+        elif pose_hint == "down":
+            direction = "Down"
+        else:
+            direction = "Forward"
+
+        previous = self._track_direction_state.get(track_id)
+        baseline_y = center_y
+        if previous:
+            dy_ratio = (center_y - float(previous.get("center_y", center_y))) / max(1.0, float(frame_height))
+            baseline_y = float(previous.get("baseline_y", center_y))
+            y_offset_ratio = (center_y - baseline_y) / max(1.0, float(frame_height))
+
+            # For frontal faces, classify from both movement and persistent vertical offset
+            # relative to each track's neutral baseline.
+            if pose_hint == "forward":
+                if dy_ratio <= -0.025 or y_offset_ratio <= -0.06:
+                    direction = "Up"
+                elif dy_ratio >= 0.025 or y_offset_ratio >= 0.06:
+                    direction = "Down"
+                elif abs(y_offset_ratio) <= 0.03:
+                    direction = "Forward"
+                else:
+                    direction = str(previous.get("direction", "Forward"))
+
+                # Keep a stable neutral baseline. Update quickly in neutral state,
+                # and very slowly in non-neutral state to avoid drift.
+                baseline_alpha = 0.08 if direction == "Forward" else 0.01
+                baseline_y = ((1.0 - baseline_alpha) * baseline_y) + (baseline_alpha * center_y)
+
+        self._track_direction_state[track_id] = {
+            "center_x": center_x,
+            "center_y": center_y,
+            "area_ratio": area_ratio,
+            "baseline_y": baseline_y,
+            "direction": direction,
+        }
+
+        if direction in {"Left", "Right", "Up", "Down", "Forward"}:
+            return direction
+        return "Forward"
 
     def _update_state(self, frame, detections: list[dict], fps: float, timestamp: str) -> None:
         success, encoded = cv2.imencode(".jpg", frame)
@@ -187,6 +261,7 @@ class CameraWorker:
                 {
                     "track_id": detection["track_id"],
                     "label": detection["label"],
+                    "direction": detection.get("direction", "Forward"),
                     "class_name": detection.get("class_name", "head"),
                     "confidence": round(float(detection.get("confidence", 0.0)), 2),
                     "bbox": detection["bbox"],
