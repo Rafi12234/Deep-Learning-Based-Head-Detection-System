@@ -17,7 +17,7 @@ export function drawBoxes(canvas, detections, frameSize) {
   context.clearRect(0, 0, rect.width, rect.height);
 
   detections.forEach(detection => {
-    const { bbox, label, confidence } = detection;
+    const { bbox, label, confidence, direction } = detection;
     const x = bbox.x1 * scaleX;
     const y = bbox.y1 * scaleY;
     const width = (bbox.x2 - bbox.x1) * scaleX;
@@ -27,7 +27,8 @@ export function drawBoxes(canvas, detections, frameSize) {
     context.lineWidth = 2;
     context.strokeRect(x, y, width, height);
 
-    const text = `${label} ${(confidence * 100).toFixed(0)}%`;
+    const directionTag = direction || 'Forward';
+    const text = `${label} ${directionTag} ${(confidence * 100).toFixed(0)}%`;
     context.font = '600 12px Space Grotesk, sans-serif';
     const textWidth = context.measureText(text).width + 16;
     context.fillStyle = 'rgba(239, 68, 68, 0.95)';
