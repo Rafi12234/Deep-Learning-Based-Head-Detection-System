@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 
 from ..config import get_settings
-from ..utils.geometry import iou
+from ..utils.geometry import iou, overlap_on_smaller_area
 
 
 class TrackingService:
@@ -39,6 +39,7 @@ class TrackingService:
                 "last_seen": now,
                 "confidence": float(detection.get("confidence", 0.0)),
                 "class_name": detection.get("class_name", "head"),
+                "pose_hint": detection.get("pose_hint", "forward"),
             }
             assigned.append({**detection, "track_id": best_track_id, "label": f"Head {best_track_id}"})
 
@@ -54,6 +55,7 @@ class TrackingService:
                             "bbox": track["bbox"],
                             "confidence": track.get("confidence", 0.0),
                             "class_name": track.get("class_name", "head"),
+                            "pose_hint": track.get("pose_hint", "forward"),
                             "track_id": track_id,
                             "label": f"Head {track_id}",
                             "stale": True,
@@ -91,7 +93,11 @@ class TrackingService:
         )
         kept: list[dict] = []
         for candidate in ordered:
-            if any(iou(candidate["bbox"], existing["bbox"]) >= 0.35 for existing in kept):
+            if any(self._is_duplicate_box(candidate["bbox"], existing["bbox"]) for existing in kept):
                 continue
             kept.append(candidate)
         return kept
+
+    def _is_duplicate_box(self, box_a: dict, box_b: dict) -> bool:
+        # Catch nested stale/current duplicates in addition to regular overlap.
+        return iou(box_a, box_b) >= 0.35 or overlap_on_smaller_area(box_a, box_b) >= 0.62
