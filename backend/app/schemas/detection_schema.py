@@ -16,6 +16,7 @@ class CenterSchema(BaseModel):
 class DetectionSchema(BaseModel):
     track_id: int = Field(default=0)
     label: str
+    direction: str = "Forward"
     class_name: str = "head"
     confidence: float
     bbox: BBoxSchema
