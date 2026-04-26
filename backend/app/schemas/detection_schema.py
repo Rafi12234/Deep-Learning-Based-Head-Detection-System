@@ -17,6 +17,10 @@ class DetectionSchema(BaseModel):
     track_id: int = Field(default=0)
     label: str
     direction: str = "Forward"
+    risk_status: str = "normal"
+    side_look_duration_seconds: float = 0.0
+    suspicious_side_look_count: int = 0
+    potential_unethical: bool = False
     class_name: str = "head"
     confidence: float
     bbox: BBoxSchema
@@ -31,6 +35,7 @@ class DetectionUpdateSchema(BaseModel):
     total_heads: int
     fps: float
     camera_status: str
+    potential_unethical_count: int = 0
     detections: list[DetectionSchema]
 
 
