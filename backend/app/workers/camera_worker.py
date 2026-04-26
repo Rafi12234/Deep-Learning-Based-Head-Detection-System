@@ -24,6 +24,9 @@ logger = setup_logger()
 
 
 class CameraWorker:
+    SIDE_LOOK_MIN_SECONDS = 3.0
+    UNETHICAL_EVENT_THRESHOLD = 3
+
     def __init__(self, websocket_manager: WebSocketManager) -> None:
         self.settings = get_settings()
         self.websocket_manager = websocket_manager
@@ -158,7 +161,8 @@ class CameraWorker:
 
             raw_detections = self.detection_service.detect(frame)
             tracked_detections = self.tracking_service.update(raw_detections)
-            self._assign_display_labels(tracked_detections, frame.shape[1], frame.shape[0])
+            now_monotonic = time.perf_counter()
+            self._assign_display_labels(tracked_detections, frame.shape[1], frame.shape[0], now_monotonic)
             timestamp = datetime.now(timezone.utc).isoformat()
             self.counting_service.update(tracked_detections, fps, timestamp)
 
@@ -170,13 +174,14 @@ class CameraWorker:
 
         self.video_service.release()
 
-    def _assign_display_labels(self, detections: list[dict], frame_width: int, frame_height: int) -> None:
+    def _assign_display_labels(self, detections: list[dict], frame_width: int, frame_height: int, now_monotonic: float) -> None:
         # Display labels are re-numbered for each frame as Head 1..N.
         detections.sort(key=lambda detection: (detection["bbox"]["x1"], detection["bbox"]["y1"]))
         active_track_ids: set[int] = set()
         for index, detection in enumerate(detections, start=1):
             detection["label"] = f"Head {index}"
             detection["direction"] = self._infer_direction(detection, frame_width, frame_height)
+            self._update_exam_monitoring_flags(detection, now_monotonic)
             active_track_ids.add(int(detection.get("track_id", -1)))
 
         # Keep per-track direction state only for tracks visible in this frame.
@@ -234,17 +239,76 @@ class CameraWorker:
                 baseline_alpha = 0.08 if direction == "Forward" else 0.01
                 baseline_y = ((1.0 - baseline_alpha) * baseline_y) + (baseline_alpha * center_y)
 
-        self._track_direction_state[track_id] = {
-            "center_x": center_x,
-            "center_y": center_y,
-            "area_ratio": area_ratio,
-            "baseline_y": baseline_y,
-            "direction": direction,
-        }
+        next_state = dict(previous) if previous else {}
+        next_state.update(
+            {
+                "center_x": center_x,
+                "center_y": center_y,
+                "area_ratio": area_ratio,
+                "baseline_y": baseline_y,
+                "direction": direction,
+            }
+        )
+        self._track_direction_state[track_id] = next_state
 
         if direction in {"Left", "Right", "Up", "Down", "Forward"}:
             return direction
         return "Forward"
+
+    def _update_exam_monitoring_flags(self, detection: dict, now_monotonic: float) -> None:
+        track_id = int(detection.get("track_id", -1))
+        direction = str(detection.get("direction", "Forward"))
+        state = self._track_direction_state.get(track_id, {})
+
+        side_look_active = bool(state.get("side_look_active", False))
+        side_look_start = state.get("side_look_start_monotonic")
+        violation_recorded = bool(state.get("side_look_violation_recorded", False))
+        suspicious_event_count = int(state.get("suspicious_side_look_count", 0))
+
+        is_side_direction = direction in {"Left", "Right"}
+
+        if is_side_direction:
+            if not side_look_active or side_look_start is None:
+                side_look_active = True
+                side_look_start = now_monotonic
+                violation_recorded = False
+
+            side_look_duration = max(0.0, now_monotonic - float(side_look_start))
+            if side_look_duration >= self.SIDE_LOOK_MIN_SECONDS and not violation_recorded:
+                suspicious_event_count += 1
+                violation_recorded = True
+                state["last_suspicious_event_monotonic"] = now_monotonic
+        else:
+            side_look_active = False
+            side_look_start = None
+            side_look_duration = 0.0
+            violation_recorded = False
+
+        potential_unethical = suspicious_event_count >= self.UNETHICAL_EVENT_THRESHOLD
+        if potential_unethical:
+            risk_status = "potential_unethical"
+        elif side_look_active and side_look_duration >= self.SIDE_LOOK_MIN_SECONDS:
+            risk_status = "suspicious"
+        else:
+            risk_status = "normal"
+
+        state.update(
+            {
+                "side_look_active": side_look_active,
+                "side_look_start_monotonic": side_look_start,
+                "side_look_violation_recorded": violation_recorded,
+                "side_look_duration_seconds": round(side_look_duration, 2),
+                "suspicious_side_look_count": suspicious_event_count,
+                "potential_unethical": potential_unethical,
+                "risk_status": risk_status,
+            }
+        )
+        self._track_direction_state[track_id] = state
+
+        detection["side_look_duration_seconds"] = round(side_look_duration, 2)
+        detection["suspicious_side_look_count"] = suspicious_event_count
+        detection["potential_unethical"] = potential_unethical
+        detection["risk_status"] = risk_status
 
     def _update_state(self, frame, detections: list[dict], fps: float, timestamp: str) -> None:
         success, encoded = cv2.imencode(".jpg", frame)
@@ -257,11 +321,16 @@ class CameraWorker:
             "total_heads": len(detections),
             "fps": round(fps, 2),
             "camera_status": self._camera_status,
+            "potential_unethical_count": sum(1 for detection in detections if detection.get("potential_unethical", False)),
             "detections": [
                 {
                     "track_id": detection["track_id"],
                     "label": detection["label"],
                     "direction": detection.get("direction", "Forward"),
+                    "risk_status": detection.get("risk_status", "normal"),
+                    "side_look_duration_seconds": round(float(detection.get("side_look_duration_seconds", 0.0)), 2),
+                    "suspicious_side_look_count": int(detection.get("suspicious_side_look_count", 0)),
+                    "potential_unethical": bool(detection.get("potential_unethical", False)),
                     "class_name": detection.get("class_name", "head"),
                     "confidence": round(float(detection.get("confidence", 0.0)), 2),
                     "bbox": detection["bbox"],
