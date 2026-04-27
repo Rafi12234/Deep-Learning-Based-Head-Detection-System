@@ -15,6 +15,7 @@ export function DetectionProvider({ children }) {
   const [frameSize, setFrameSize] = useState({ width: 1280, height: 720 });
   const [health, setHealth] = useState(null);
 
+  
   useEffect(() => {
     let socket;
     const connect = () => {
