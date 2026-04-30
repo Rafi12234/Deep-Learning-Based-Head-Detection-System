@@ -5,6 +5,7 @@ export default function DetectionLogTable({ logs }) {
   const [selected, setSelected] = useState(null);
 
   return (
+    
     <div className="glass-panel overflow-hidden rounded-3xl">
       <div className="border-b border-white/10 px-5 py-4">
         <h3 className="text-lg font-semibold text-white">Detection Logs</h3>
