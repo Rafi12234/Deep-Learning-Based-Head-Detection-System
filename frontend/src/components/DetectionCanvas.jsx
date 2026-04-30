@@ -7,6 +7,7 @@ export default function DetectionCanvas({ detections, frameSize }) {
   useEffect(() => {
     drawBoxes(canvasRef.current, detections, frameSize);
   }, [detections, frameSize]);
+  
 
   return <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full" />;
 }
