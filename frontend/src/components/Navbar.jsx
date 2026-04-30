@@ -14,6 +14,7 @@ export default function Navbar() {
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">WebSocket: {connectionStatus}</span>
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-slate-200">Camera: {cameraStatus}</span>
           <span className="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-1 text-sky-100">Heads: {totalHeads}</span>
+          
         </div>
       </div>
     </header>
