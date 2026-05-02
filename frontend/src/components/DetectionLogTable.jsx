@@ -14,6 +14,7 @@ export default function DetectionLogTable({ logs }) {
         <table className="min-w-full text-left text-sm">
           <thead className="text-slate-400">
             <tr>
+              
               <th className="px-5 py-3">Timestamp</th>
               <th className="px-5 py-3">Heads</th>
               <th className="px-5 py-3">FPS</th>
