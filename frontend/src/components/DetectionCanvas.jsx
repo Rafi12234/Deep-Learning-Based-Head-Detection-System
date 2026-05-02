@@ -6,6 +6,7 @@ export default function DetectionCanvas({ detections, frameSize }) {
 
   useEffect(() => {
     drawBoxes(canvasRef.current, detections, frameSize);
+    
   }, [detections, frameSize]);
   
 
