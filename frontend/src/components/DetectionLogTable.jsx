@@ -12,6 +12,7 @@ export default function DetectionLogTable({ logs }) {
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
+          
           <thead className="text-slate-400">
             <tr>
               
