@@ -16,7 +16,7 @@ export default function DetectionLogTable({ logs }) {
           <thead className="text-slate-400">
             <tr>
               
-              <th className="px-5 py-3">Timestamp</th>
+              <th className="px-5  py-3">Timestamp</th>
               <th className="px-5 py-3">Heads</th>
               <th className="px-5 py-3">FPS</th>
               <th className="px-5 py-3">Camera ID</th>
