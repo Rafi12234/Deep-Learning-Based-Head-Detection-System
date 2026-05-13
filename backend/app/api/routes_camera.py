@@ -41,7 +41,7 @@ def stream_camera(worker: CameraWorker = Depends(get_worker)):
         while True:
             frame_bytes = worker.get_latest_frame_bytes()
             if frame_bytes:
-                yield boundary + b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+                yield boundary + b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes +  b"\r\n"
             else:
                 time.sleep(0.2)
 
