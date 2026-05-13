@@ -13,4 +13,4 @@ class Camera(Base):
     status: Mapped[str] = mapped_column(String(32), default="stopped")
     location: Mapped[str] = mapped_column(String(128), default="N/A")
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now(),  onupdate=func.now())
