@@ -21,7 +21,7 @@ def camera_status(worker: CameraWorker = Depends(get_worker)):
 
 
 @router.post("/start")
-def start_camera(payload: CameraControlRequest | None = None, worker: CameraWorker = Depends(get_worker)):
+def start_camera(payload: CameraControlRequest | None = None, worker: CameraWorker =  Depends(get_worker)):
     source = payload.source if payload else None
     return worker.start(source=source)
 
