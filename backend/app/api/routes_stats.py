@@ -5,7 +5,7 @@ from ..schemas.camera_schema import HealthResponse
 from ..workers.camera_worker import CameraWorker
 
 
-router = APIRouter(prefix="/api/stats", tags=["stats"])
+router = APIRouter(prefix="/api/stats",  tags=["stats"])
 
 
 def get_worker() -> CameraWorker:
