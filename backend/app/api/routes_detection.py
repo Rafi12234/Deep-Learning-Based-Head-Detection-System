@@ -7,7 +7,7 @@ from ..workers.camera_worker import CameraWorker
 router = APIRouter(prefix="/api/detections", tags=["detections"])
 
 
-def get_worker() -> CameraWorker:
+def get_worker() ->  CameraWorker:
     from ..main import camera_worker
 
     return camera_worker
