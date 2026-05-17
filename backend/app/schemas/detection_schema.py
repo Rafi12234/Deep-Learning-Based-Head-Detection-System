@@ -18,7 +18,7 @@ class DetectionSchema(BaseModel):
     label: str
     direction: str = "Forward"
     risk_status: str = "normal"
-    side_look_duration_seconds: float = 0.0
+    side_look_duration_seconds: float =  0.0
     suspicious_side_look_count: int = 0
     potential_unethical: bool = False
     class_name: str = "head"
