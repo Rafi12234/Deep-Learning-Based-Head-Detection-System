@@ -36,7 +36,7 @@ class HeadDetectionService:
     def _pose_hint_from_class_name(self, class_name: str) -> str:
         normalized = str(class_name).strip().lower().replace("-", "_").replace(" ", "_")
         if "left" in normalized:
-            return "left"
+             return "left"
         if "right" in normalized:
             return "right"
         if "up" in normalized:
