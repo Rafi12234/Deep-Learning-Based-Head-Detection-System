@@ -61,7 +61,7 @@ class HeadDetectionService:
             self.mock_mode = True
             return
         try:
-            self.model = YOLO(str(model_path))
+            self.model =  YOLO(str(model_path))
             self.model_loaded = True
             names = getattr(self.model, "names", None)
             if names:
