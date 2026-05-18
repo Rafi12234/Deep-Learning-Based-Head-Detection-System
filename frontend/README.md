@@ -1,6 +1,6 @@
 # Frontend
 
-React + Vite dashboard for real-time head detection monitoring.
+React + Vite dashboard for real-tim e head detection monitoring.
 
 ## Run Locally
 
