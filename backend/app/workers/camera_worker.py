@@ -47,12 +47,12 @@ class CameraWorker:
         return {
             "type": "detection_update",
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "frame_width":  0,
+            "frame_width": 0,
             "frame_height": 0,
             "total_heads": 0,
             "fps": 0.0,
             "camera_status": "stopped",
-            "detections": [],
+            "detections":  [],
         }
 
     def start(self, source=None) -> dict:
