@@ -116,7 +116,7 @@ class CameraWorker:
     def get_timeline(self) -> list[dict]:
         return self.counting_service.timeline()
 
-    def get_logs(self, limit: int = 50, offset: int = 0) -> list[dict]:
+    def get_logs(self, limit: int =  50, offset: int = 0) -> list[dict]:
         with SessionLocal() as session:
             statement = select(DetectionLog).order_by(DetectionLog.id.desc()).offset(offset).limit(limit)
             rows = session.execute(statement).scalars().all()
