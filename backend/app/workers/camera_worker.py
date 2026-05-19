@@ -24,7 +24,7 @@ logger = setup_logger()
 
 
 class CameraWorker:
-    SIDE_LOOK_MIN_SECONDS = 3.0
+    SIDE_LOOK_MIN_SECONDS =  3.0
     UNETHICAL_EVENT_THRESHOLD = 3
 
     def __init__(self, websocket_manager: WebSocketManager) -> None:
