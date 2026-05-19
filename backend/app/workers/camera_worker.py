@@ -91,7 +91,7 @@ class CameraWorker:
         self._store_camera_status()
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=1.0)
-        return {"status": "stopped"}
+        return {"status": "Stopped"}
 
     def get_status(self) -> dict:
         return {
