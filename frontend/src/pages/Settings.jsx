@@ -12,7 +12,7 @@ export default function Settings() {
       <div className="glass-panel rounded-3xl p-6">
         <h2 className="text-2xl font-semibold text-white">Settings</h2>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <label className="space-y-2 text-sm text-slate-300"><span>Backend API URL</span><input className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none" value={apiUrl} onChange={event => setApiUrl(event.target.value)} /></label>
+          <label className="space-y-2 text-sm  text-slate-300"><span>Backend API URL</span><input className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none" value={apiUrl} onChange={event => setApiUrl(event.target.value)} /></label>
           <label className="space-y-2 text-sm text-slate-300"><span>WebSocket URL</span><input className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none" value={wsUrl} onChange={event => setWsUrl(event.target.value)} /></label>
           <label className="space-y-2 text-sm text-slate-300"><span>Confidence Threshold</span><input className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none" value={confidence} onChange={event => setConfidence(event.target.value)} /></label>
           <label className="space-y-2 text-sm text-slate-300"><span>Camera Source</span><input className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none" value={cameraSource} onChange={event => setCameraSource(event.target.value)} /></label>
