@@ -12,7 +12,7 @@ export default function useWebSocket(url, onMessage) {
       onMessage,
     });
 
-    return () => socket.close();
+    return () =>  socket.close();
   }, [url, onMessage]);
 
   return status;
