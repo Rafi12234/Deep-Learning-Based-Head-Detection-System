@@ -22,7 +22,7 @@ export default function Dashboard() {
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <StatsChart data={detectionHistory} />
         <div className="glass-panel rounded-3xl p-5">
-          <h3 className="text-lg font-semibold text-white">System Health</h3>
+          <h3 className="text-lg font-semibold  text-white">System Health</h3>
           <div className="mt-4 space-y-3 text-sm text-slate-300">
             <div className="flex items-center justify-between"><span>Backend</span><span className="text-emerald-300">{health?.status || 'unknown'}</span></div>
             <div className="flex items-center justify-between"><span>Model loaded</span><span>{health?.model_loaded ? 'yes' : 'no'}</span></div>
