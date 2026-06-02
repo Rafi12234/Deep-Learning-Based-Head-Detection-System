@@ -5,7 +5,7 @@ from ..schemas.camera_schema import CameraControlRequest, CameraStatusResponse
 from ..workers.camera_worker import CameraWorker
 
 
-router = APIRouter(prefix="/api/camera",  tags=["camera"])
+router = APIRouter(prefix="/api/camera", tags=["camera"])
 
 
 def get_worker() -> CameraWorker:
