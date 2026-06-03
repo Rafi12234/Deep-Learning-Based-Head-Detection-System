@@ -15,7 +15,7 @@ The backend reads camera frames, runs detection, tracks heads, computes stats, a
 
 ## Tech Stack
 
-- Backend: Python, FastAPI, Uvicorn, SQLAlchemy, OpenCV, Ultralytics YOLO
+- Backend: Python, FastAPI, Uvicorn, SQLAlche my, OpenCV, Ultralytics YOLO
 - Frontend: React, Vite, Tailwind CSS, Axios, Recharts
 - Storage: SQLite
 
